@@ -88,8 +88,8 @@ impl Task {
         self.db.set_by_key("X_TRIGGER", 1u8)?;
         self.db.set_by_key("Y_TRIGGER", 1u8)?;
         self.db.send()?;
-        self.db.set_by_key("X_TRIGGER", 0u8)?;
-        self.db.set_by_key("Y_TRIGGER", 0u8)?;
+        // self.db.set_by_key("X_TRIGGER", 0u8)?;
+        // self.db.set_by_key("Y_TRIGGER", 0u8)?;
         Ok(())
     }
 

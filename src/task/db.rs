@@ -7,21 +7,17 @@ use std::io::{Read, Write};
 use std::{thread, time};
 use std::sync::mpsc::channel;
 
-static WRITE_TABLE_INDICES: [(&'static str, usize); 13] = [
-    ("Y_REST_STATE", 0usize),
-    ("X_ACTIVATION", 1usize),
-    ("X_READY",      2usize),
-    ("X_DIRECTION",  3usize),
-    ("X_TRIGGER",    4usize),
-    ("X_COMPLETED",  6usize),
-    ("Y_TRIGGER",    14usize),
-    ("Y_COMPLETED",  16usize),
-    ("LIGHT",        20usize),
+static WRITE_TABLE_INDICES: [(&'static str, usize); 9] = [
+    ("X_REST_STATE", 0usize),
+    ("Y_REST_STATE", 1usize),
+    ("X_TRIGGER",    2usize),
+    ("Y_TRIGGER",    3usize),
+    ("LIGHT",        4usize),
     // f32
-    ("X_POSITION",   10usize),
-    ("X_SPEED",      15usize),
-    ("Y_POSITION",   20usize),
-    ("Y_SPEED",      25usize)
+    ("X_POSITION",   0usize),
+    ("X_SPEED",      1usize),
+    ("Y_POSITION",   2usize),
+    ("Y_SPEED",      3usize)
 ];
 
 static READ_TABLE_INDICES: [(&'static str, usize); 13] = [
@@ -44,22 +40,25 @@ static READ_TABLE_INDICES: [(&'static str, usize); 13] = [
 pub struct DB {
     write_table: Table,
     read_table: Table,
-    conn: Option<TcpStream>
+    input_conn: Option<TcpStream>,
+    output_conn: Option<TcpStream>
 }
 
 impl DB {
     pub fn new() -> DB {
         DB {
-            write_table: Table::new(100, 100),
+            write_table: Table::new(5, 4),
             read_table: Table::new(100, 100),
-            conn: None
+            output_conn: None,
+            input_conn: None
         }
     }
 
     pub fn connect(&mut self) -> Result<(), &'static str> {
-        match TcpStream::connect("192.168.1.101:2666") {
+        match TcpStream::connect("localhost:3333") {
             Ok(stream) => {
-                self.conn = Some(stream);
+                self.input_conn = Some(stream.try_clone().unwrap());
+                self.output_conn = Some(stream.try_clone().unwrap());
                 Ok(())
             },
             Err(_e) => {
@@ -69,7 +68,12 @@ impl DB {
     }
 
     pub fn disconnect(&mut self) {
-        match &self.conn {
+        match &self.output_conn {
+            Some(conn) => conn.shutdown(Shutdown::Both).unwrap(),
+            None => {}
+        }
+
+        match &self.input_conn {
             Some(conn) => conn.shutdown(Shutdown::Both).unwrap(),
             None => {}
         }
@@ -89,7 +93,7 @@ impl DB {
     }
 
     pub fn send(&self) -> Result<(), &'static str> {
-        match &self.conn {
+        match &self.output_conn {
             Some(conn) => {
                 let mut conn = conn;
                 match conn.write(&self.prepared_data()) {
@@ -103,17 +107,27 @@ impl DB {
         }
     }
 
-    // pub fn sync(&self) {
-    //     match &self.conn {
-    //         Some(conn) => {
-    //             let mut conn = conn;
-    //             conn.read(buf: &mut [u8])
-    //         },
-    //         None => {
-    //             Err("No connection")
-    //         }
-    //     }
-    // }
+    pub fn sync(&self) {
+        match &self.input_conn {
+            Some(conn) => {
+                let mut conn = conn.try_clone().unwrap();
+                conn.set_nonblocking(true).expect("set_nonblocking call failed");
+
+                thread::spawn(move || {
+                    let mut buffer = [0u8; 500];
+                    match conn.read(&mut buffer) {
+                        Ok(size) => {
+                        
+                        },
+                        Err(e) => {
+
+                        }
+                    }
+                });
+            },
+            None => {}
+        }
+    }
 
     pub fn find_write_table_index_by_key(key: &str) -> Result<usize, &'static str> {
         let mut result = Err("Cannot find key");

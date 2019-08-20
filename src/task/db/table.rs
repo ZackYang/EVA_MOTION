@@ -17,6 +17,7 @@ impl Table {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut results = self.u8_range.to_vec();
+        println!("{:?}", results);
         for float in &self.f32_range {
             results.append(&mut float.to_bits().to_be_bytes().to_vec());
         }
