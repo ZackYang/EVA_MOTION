@@ -1,6 +1,3 @@
-mod db;
-use db::DB;
-use db::__SetGetByKey;
 // Y_REST_STATE
 // X_ACTIVATION
 // X_READY
@@ -15,17 +12,27 @@ use db::__SetGetByKey;
 // X_SPEED
 // Y_POSITION
 // Y_SPEED
+pub mod message;
+pub mod reader;
+use reader::Reader;
+use message::{Msg, Value};
+use std::net::{TcpStream, Shutdown};
+use std::thread;
+use std::sync::Mutex;
+use std::sync::mpsc::{channel, Receiver};
+use std::io::Read;
+
 
 #[derive(Clone)]
 pub enum MotionType {
     MoveTo(f32, f32, f32),
     Capture,
-    GoOnIf(Vec<(String, u8)>),
+    GoOnIf(Vec<(&'static str, Value)>),
     Stop,
     Reset
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Status {
     Pending,
     Working,
@@ -37,13 +44,45 @@ pub struct Task {
     actions: Vec<MotionType>,
     pub status: Status,
     current_step: usize,
-    pub db: DB
+    conn: TcpStream
+}
+
+lazy_static! {
+    static ref REMOTE_STATES: Mutex<Vec<u8>> = Mutex::new(vec![0u8; 500]);
 }
 
 impl Task {
-    pub fn new() -> Task {
-        let mut task = Task { actions: Vec::new(), status: Status::Pending, current_step: 0, db: DB::new() };
-        task.db.connect().unwrap();
+    pub fn new(addr: &str) -> Task {
+        let conn = TcpStream::connect(addr).unwrap();
+        conn.set_nonblocking(true).unwrap();
+        let mut input_conn = conn.try_clone().unwrap();
+        thread::spawn(move || {
+            let mut buffer = [0u8;500];
+            // let mut md5 = 
+            loop {
+                match input_conn.read(&mut buffer) {
+                    Ok(size) => {
+                        if size > 0 {
+                            match REMOTE_STATES.lock() {
+                                Ok(mut states) => {
+                                    // println!("{:?}", buffer.to_vec());
+                                    *states = buffer.to_vec();
+                                },
+                                Err(_) => {}
+                            };
+                        }
+                    },
+                    Err(_e) => {}
+                }
+            }
+        });
+
+        let task = Task {
+            actions: Vec::new(),
+            status: Status::Pending,
+            current_step: 0,
+            conn: conn
+        };
         task
     }
 
@@ -66,7 +105,9 @@ impl Task {
             MotionType::MoveTo(x, y, speed) => {
                 self.move_to(*x, *y, *speed)?;
             },
-            MotionType::GoOnIf(_conditions) => {},
+            MotionType::GoOnIf(conditions) => {
+                self.go_on_if(conditions.to_vec());
+            },
             MotionType::Capture => {},
             MotionType::Stop => {},
             MotionType::Reset => {}
@@ -74,42 +115,42 @@ impl Task {
         self.current_step += 1;
         if self.current_step == self.actions.len() {
             self.status = Status::Done;
-            self.db.disconnect();
+            self.conn.shutdown(Shutdown::Both);
         }
+        std::thread::sleep_ms(100);
         Ok(())
     }
 
     fn move_to(&mut self, x: f32, y: f32, speed: f32) -> Result<(), &'static str> {
-        self.db.set_by_key("X_POSITION", x)?;
-        self.db.set_by_key("Y_POSITION", y)?;
-        self.db.set_by_key("X_SPEED", speed)?;
-        self.db.set_by_key("Y_SPEED", speed)?;
-        self.db.send()?;
-        self.db.set_by_key("X_TRIGGER", 1u8)?;
-        self.db.set_by_key("Y_TRIGGER", 1u8)?;
-        self.db.send()?;
-        // self.db.set_by_key("X_TRIGGER", 0u8)?;
-        // self.db.set_by_key("Y_TRIGGER", 0u8)?;
+        let mut msg = Msg::new(self.conn.try_clone().unwrap());
+        msg.set("X_POSITION", Value::Float(x))?;
+        msg.set("Y_POSITION", Value::Float(y))?;
+        msg.set("SPEED", Value::Float(speed))?;
+        msg.send()?;
+        self.go_on_if(msg.conditions.clone());
+        msg.set("X_TRIGGER", Value::Bool(true))?;
+        msg.set("Y_TRIGGER", Value::Bool(true))?;
+        msg.send()?;
+        self.go_on_if(msg.conditions.clone());
         Ok(())
     }
 
-    fn go_on_if(&mut self, conditions: Vec<(String, u8)>) {
-        for (key, string_value) in conditions {
-            self.db.get_u8_by_key(key.as_str());
+    fn go_on_if(&mut self, conditions: Vec<(&str, Value)>) {
+        let mut done = false;
+        while !done {
+            match REMOTE_STATES.lock() {
+                Ok(states) => {
+                    let reader = Reader::new(&mut states.clone());
+                    let mut result = false;
+                    for (key, value) in &conditions {
+                        result &= reader.check(key, value.clone());
+                    }
+                    if result { done = true }
+                },
+                Err(_e) => {
+
+                }
+            }
         }
     }   
-}
-
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    #[test]
-    fn send_data() {
-        let task = Task::new();
-        // println!("{:X?}", table.to_bytes());
-        let result = task.db.send().unwrap();
-        assert_eq!(result, ());
-    }
 }

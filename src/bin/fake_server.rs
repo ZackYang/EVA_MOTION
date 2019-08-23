@@ -3,14 +3,21 @@ use std::net::{TcpListener, TcpStream, Shutdown};
 use std::io::{Read, Write};
 
 fn handle_client(mut stream: TcpStream) {
-    let mut data = [0 as u8; 21]; // using 50 byte buffer
+    let mut data = [0 as u8; 13]; // using 50 byte buffer
     while match stream.read(&mut data) {
         Ok(size) => {
             // echo everything!
-            // stream.write(&data[0..size]).unwrap();
             if size > 0 {
                 println!("{:?}", data.to_vec());
             }
+            let mut sending_stream = stream.try_clone().unwrap();
+            thread::spawn(move|| { 
+                for i in 0u8..255u8 {
+                    std::thread::sleep_ms(3000);
+                    sending_stream.write(&vec![i; 500]).unwrap();
+                }
+            });
+
             true
         },
         Err(_) => {
