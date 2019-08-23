@@ -6,7 +6,7 @@ use eva_motion_control::task::message::Value;
 // https://blog.csdn.net/abcdu1/article/details/75095781 浮点数标准
 
 fn main() {
-    let mut task = Task::new("192.168.2.77:2000");
+    let mut task = Task::new("192.168.2.166:2000");
 
     task.add(MotionType::MoveTo(15.0, 13.0, 20.0));
     task.add(MotionType::MoveTo(20.0, 40.0, 20.0));
