@@ -29,7 +29,8 @@ pub enum MotionType {
     Capture,
     GoOnIf(Vec<(&'static str, Value)>),
     Stop,
-    Reset
+    Reset,
+    Light(bool)
 }
 
 #[derive(PartialEq, Debug)]
@@ -110,7 +111,12 @@ impl Task {
             },
             MotionType::Capture => {},
             MotionType::Stop => {},
-            MotionType::Reset => {}
+            MotionType::Reset => {
+                self.reset()?;
+            },
+            MotionType::Light(on) => {
+                self.light(*on)?;
+            }
         }
         self.current_step += 1;
         if self.current_step == self.actions.len() {
@@ -125,13 +131,31 @@ impl Task {
         let mut msg = Msg::new(self.conn.try_clone().unwrap());
         msg.set("X_POSITION", Value::Float(x))?;
         msg.set("Y_POSITION", Value::Float(y))?;
+        msg.set("LIGHT", Value::Bool(true))?;
         msg.set("SPEED", Value::Float(speed))?;
         msg.send()?;
-        self.go_on_if(msg.conditions.clone());
+        // self.go_on_if(msg.conditions.clone());
         msg.set("X_TRIGGER", Value::Bool(true))?;
         msg.set("Y_TRIGGER", Value::Bool(true))?;
         msg.send()?;
-        self.go_on_if(msg.conditions.clone());
+        // self.go_on_if(msg.conditions.clone());
+        Ok(())
+    }
+
+    fn light(&mut self, on: bool) -> Result<(), &'static str> {
+        let mut msg = Msg::new(self.conn.try_clone().unwrap());
+        msg.set("LIGHT", Value::Bool(on))?;
+        msg.send()?;
+        // self.go_on_if(msg.conditions.clone());
+        Ok(())
+    }
+
+    fn reset(&mut self) -> Result<(), &'static str> {
+        let mut msg = Msg::new(self.conn.try_clone().unwrap());
+        msg.set("X_REST_STATE", Value::Bool(true))?;
+        msg.set("Y_REST_STATE", Value::Bool(true))?;
+        msg.set("LIGHT", Value::Bool(true))?;
+        msg.send()?;
         Ok(())
     }
 

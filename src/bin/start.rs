@@ -8,15 +8,17 @@ use eva_motion_control::task::message::Value;
 fn main() {
     let mut task = Task::new("localhost:3333");
 
+    task.add(MotionType::Reset);
+    task.add(MotionType::Light(true));
     task.add(MotionType::MoveTo(15.0, 13.0, 20.0));
-    task.add(MotionType::MoveTo(20.0, 40.0, 20.0));
-    task.add(MotionType::MoveTo(90.0, 20.0, 20.0));
-    
+    task.add(MotionType::Reset);
+
     task.add(MotionType::GoOnIf(vec![("Y_TRIGGER", Value::Bool(true))]));
 
     task.start().unwrap();
     println!("Status: {:?}", task.status);
     while task.status == Status::Working {
         task.run().unwrap();
+        std::thread::sleep_ms(10000);
     }
 }

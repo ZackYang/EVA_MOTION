@@ -59,7 +59,10 @@ impl Msg {
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        let bools = u8::from_bits(&self.bools);
+        // println!("{:?}", &self.bools);
+        let mut bools = self.bools.clone();
+        bools.reverse();
+        let bools = u8::from_bits(&bools);
         let mut results = vec![bools];
         for float in &self.floats {
             let mut result = float.to_bits().to_be_bytes().to_vec();
