@@ -12,6 +12,7 @@
 // X_SPEED
 // Y_POSITION
 // Y_SPEED
+extern crate reqwest;
 pub mod message;
 pub mod reader;
 use reader::Reader;
@@ -21,11 +22,14 @@ use std::thread;
 use std::sync::Mutex;
 use std::sync::mpsc::{channel, Receiver};
 use std::io::Read;
+use std::process::Command;
 
 
 #[derive(Clone)]
 pub enum MotionType {
     MoveTo(f32, f32, f32),
+    InitCamera,
+    StopCamera,
     Capture,
     GoOnIf(Vec<(&'static str, Value)>),
     Stop,
@@ -109,7 +113,15 @@ impl Task {
             MotionType::GoOnIf(conditions) => {
                 self.go_on_if(conditions.to_vec());
             },
-            MotionType::Capture => {},
+            MotionType::InitCamera => {
+                self.init_camera();
+            },
+            MotionType::StopCamera => {
+                self.stop_camera();
+            },
+            MotionType::Capture => {
+                self.capture();
+            },
             MotionType::Stop => {},
             MotionType::Reset => {
                 self.reset()?;
@@ -190,5 +202,37 @@ impl Task {
                 }
             }
         }
-    }   
+    }
+
+    fn init_camera(&mut self) {
+        let output = Command::new("./eva_camera")
+                            .arg("")
+                            .output()
+                            .expect("Failed to execute command");
+    }
+
+    fn capture(&mut self) {
+        // camera port 9990
+        let mut resp = reqwest::get("http://localhost:9990/capture").unwrap();
+        if resp.status().is_success() {
+            println!("success!");
+            let mut file = std::fs::File::create("file.jpg").unwrap();
+            resp.copy_to(&mut file).unwrap();
+        }
+    }
+
+    fn stop_camera(&mut self) {
+        let pid = Command::new("cat")
+            .arg("/tmp/eva_camera.pid")
+            .output()
+            .expect("Failed to execute command");
+
+        let pid_str = format!("{}", String::from_utf8_lossy(&pid.stdout));
+
+        let output = Command::new("kill")
+                    .arg("-9")
+                    .arg(pid_str)
+                    .output()
+                    .expect("Failed to execute command");
+    }
 }
