@@ -205,7 +205,7 @@ impl Task {
     }
 
     fn init_camera(&mut self) {
-        let output = Command::new("./eva_camera")
+        let output = Command::new("eva_camera")
                             .arg("")
                             .output()
                             .expect("Failed to execute command");

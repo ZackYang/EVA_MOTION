@@ -6,7 +6,7 @@ use eva_motion_control::task::message::Value;
 // https://blog.csdn.net/abcdu1/article/details/75095781 浮点数标准
 
 fn main() {
-    let mut task = Task::new("localhost:3333");
+    let mut task = Task::new("192.168.2.166:2000");
 
     task.add(MotionType::InitCamera);
     task.add(MotionType::Capture);
