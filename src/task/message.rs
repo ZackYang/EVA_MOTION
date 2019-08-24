@@ -27,6 +27,11 @@ impl Msg {
         }
     }
 
+    pub fn load(&mut self, bools: Vec<bool>, floats: Vec<f32>) {
+        self.bools = bools;
+        self.floats = floats;
+    }
+
     fn index(&self, key: &str) -> Result<usize, &'static str> {
         let pairs: HashMap<&str, i32> =
             [
@@ -60,6 +65,8 @@ impl Msg {
 
     fn to_bytes(&self) -> Vec<u8> {
         println!("{:?}", &self.bools);
+        println!("{:?}", &self.floats);
+        println!("======================================= 无害 =======================================");
         let mut bools = self.bools.clone();
         bools.reverse();
         let bools = u8::from_bits(&bools);

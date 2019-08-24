@@ -127,6 +127,20 @@ impl Task {
         Ok(())
     }
 
+    pub fn invoke(&mut self, bools: Vec<bool>, floats: Vec<f32>) {
+        if bools.len() != 8 {
+            panic!("Arguments should contain 8 bools");
+        }
+
+        if floats.len() != 3 {
+            panic!("Arguments should contain 3 floats");
+        }
+        let mut msg = Msg::new(self.conn.try_clone().unwrap());
+        msg.load(bools, floats);
+        msg.send().unwrap();
+        std::thread::sleep_ms(10000);
+    }
+
     fn move_to(&mut self, x: f32, y: f32, speed: f32) -> Result<(), &'static str> {
         let mut msg = Msg::new(self.conn.try_clone().unwrap());
         msg.set("X_POSITION", Value::Float(x))?;
