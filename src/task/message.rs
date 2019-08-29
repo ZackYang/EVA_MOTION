@@ -7,12 +7,14 @@ use bitty::FromBits;
 #[derive(Clone)]
 pub enum Value {
     Bool(bool),
+    Int(u8),
     Float(f32)
 }
 
 pub struct Msg {
     pub bools: Vec<bool>,
     pub floats: Vec<f32>,
+    pub ints: Vec<u8>,
     conn: TcpStream,
     pub conditions: Vec<(&'static str, Value)>
 }
@@ -71,6 +73,9 @@ impl Msg {
         bools.reverse();
         let bools = u8::from_bits(&bools);
         let mut results = vec![bools];
+        
+        results.append(&mut self.ints.to_vec());
+
         for float in &self.floats {
             let mut result = float.to_bits().to_be_bytes().to_vec();
             results.append(&mut result);

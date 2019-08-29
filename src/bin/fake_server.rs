@@ -14,7 +14,7 @@ fn handle_client(mut stream: TcpStream) {
             thread::spawn(move|| { 
                 for i in 0u8..255u8 {
                     std::thread::sleep_ms(3000);
-                    sending_stream.write(&vec![i; 500]).unwrap();
+                    sending_stream.write(&vec![i; 36]).unwrap();
                 }
             });
 

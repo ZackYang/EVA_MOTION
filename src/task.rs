@@ -62,7 +62,7 @@ impl Task {
         conn.set_nonblocking(true).unwrap();
         let mut input_conn = conn.try_clone().unwrap();
         thread::spawn(move || {
-            let mut buffer = [0u8;500];
+            let mut buffer = [0u8;36];
             // let mut md5 = 
             loop {
                 match input_conn.read(&mut buffer) {
