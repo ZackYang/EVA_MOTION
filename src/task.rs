@@ -16,6 +16,7 @@ extern crate reqwest;
 pub mod message;
 pub mod reader;
 use reader::Reader;
+use reader::ValueType;
 use message::{Msg, Value};
 use std::net::{TcpStream, Shutdown};
 use std::thread;
@@ -23,6 +24,7 @@ use std::sync::Mutex;
 use std::sync::mpsc::{channel, Receiver};
 use std::io::Read;
 use std::process::Command;
+use std::time::Instant;
 
 
 #[derive(Clone)]
@@ -37,7 +39,12 @@ pub enum MotionType {
     Light(bool)
 }
 
-#[derive(PartialEq, Debug)]
+pub trait AddImage {
+    fn add_image(&mut self, image: Vec<u8>, filename: String);
+    fn change_status(&mut self, status: String);
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum Status {
     Pending,
     Working,
@@ -45,22 +52,28 @@ pub enum Status {
     Done
 }
 
-pub struct Task {
+pub struct Task<T> {
     actions: Vec<MotionType>,
     pub status: Status,
     current_step: usize,
-    conn: TcpStream
+    conn: TcpStream,
+    reader: Reader,
+    image_receiver: T,
+    current_image: usize
 }
 
 lazy_static! {
     static ref REMOTE_STATES: Mutex<Vec<u8>> = Mutex::new(vec![0u8; 500]);
 }
 
-impl Task {
-    pub fn new(addr: &str) -> Task {
+impl<T: AddImage> Task<T> {
+    pub fn new(can_add_image: T, uuid: &'static str, addr: &str, reader_keys: Vec<(&'static str, ValueType)>) -> Task<T> {
         let conn = TcpStream::connect(addr).unwrap();
         conn.set_nonblocking(true).unwrap();
         let mut input_conn = conn.try_clone().unwrap();
+
+        let receiver = can_add_image;
+
         thread::spawn(move || {
             let mut buffer = [0u8;36];
             // let mut md5 = 
@@ -86,7 +99,10 @@ impl Task {
             actions: Vec::new(),
             status: Status::Pending,
             current_step: 0,
-            conn: conn
+            conn: conn,
+            reader: Reader::new(reader_keys),
+            image_receiver: receiver,
+            current_image: 0
         };
         task
     }
@@ -105,6 +121,14 @@ impl Task {
     }
 
     pub fn run(&mut self) -> Result<(), &str> {
+        if self.status == Status::Fail {
+            return Err("Task Failed");
+        }
+
+        if self.status == Status::Done {
+            return Err("Task is Done");
+        }
+
         let actions = self.actions.clone(); 
         match &actions[self.current_step] {
             MotionType::MoveTo(x, y, speed) => {
@@ -133,7 +157,7 @@ impl Task {
         self.current_step += 1;
         if self.current_step == self.actions.len() {
             self.status = Status::Done;
-            self.conn.shutdown(Shutdown::Both);
+            self.conn.shutdown(Shutdown::Both).unwrap();
         }
         std::thread::sleep_ms(100);
         Ok(())
@@ -160,11 +184,11 @@ impl Task {
         msg.set("LIGHT", Value::Bool(true))?;
         msg.set("SPEED", Value::Float(speed))?;
         msg.send()?;
-        // self.go_on_if(msg.conditions.clone());
+        self.go_on_if(msg.conditions.clone());
         msg.set("X_TRIGGER", Value::Bool(true))?;
         msg.set("Y_TRIGGER", Value::Bool(true))?;
         msg.send()?;
-        // self.go_on_if(msg.conditions.clone());
+        self.go_on_if(msg.conditions.clone());
         Ok(())
     }
 
@@ -172,7 +196,7 @@ impl Task {
         let mut msg = Msg::new(self.conn.try_clone().unwrap());
         msg.set("LIGHT", Value::Bool(on))?;
         msg.send()?;
-        // self.go_on_if(msg.conditions.clone());
+        self.go_on_if(msg.conditions.clone());
         Ok(())
     }
 
@@ -182,42 +206,64 @@ impl Task {
         msg.set("Y_REST_STATE", Value::Bool(true))?;
         msg.set("LIGHT", Value::Bool(true))?;
         msg.send()?;
+        self.go_on_if(msg.conditions.clone());
         Ok(())
     }
 
     fn go_on_if(&mut self, conditions: Vec<(&str, Value)>) {
         let mut done = false;
+        let start = Instant::now();
         while !done {
             match REMOTE_STATES.lock() {
                 Ok(states) => {
-                    let reader = Reader::new(&mut states.clone());
+                    // let reader = Reader::new(&mut states.clone());
+                    self.reader.load(&mut states.clone());
                     let mut result = false;
                     for (key, value) in &conditions {
-                        result &= reader.check(key, value.clone());
+                        result &= self.reader.check(key, value.clone());
                     }
                     if result { done = true }
                 },
-                Err(_e) => {
-
-                }
+                Err(_e) => {}
+            }
+            if start.elapsed().as_secs() > 10 {
+                self.status = Status::Fail;
+                self.image_receiver.change_status("Arguments confirmation timeout".to_string());
+                done = true
             }
         }
     }
 
     fn init_camera(&mut self) {
-        let output = Command::new("eva_camera")
-                            .arg("")
-                            .output()
-                            .expect("Failed to execute command");
+        match Command::new("eva_camera").arg("").output() {
+            Ok(r) => {},
+            Err(e) => {
+                self.status = Status::Fail;
+                self.image_receiver.change_status("Cannot start camera".to_string());
+                return;
+            } 
+        }
+        std::thread::sleep_ms(10000);
     }
 
     fn capture(&mut self) {
         // camera port 9990
-        let mut resp = reqwest::get("http://localhost:9990/capture").unwrap();
+        let mut try_get_image = reqwest::get("http://localhost:9990/capture");
+        let mut resp = match try_get_image {
+            Ok(r) => { r },
+            Err(e) => {
+                self.status = Status::Fail;
+                self.image_receiver.change_status("Cannot connect to camera".to_string());
+                return;
+            } 
+        };
+
         if resp.status().is_success() {
             println!("success!");
-            let mut file = std::fs::File::create("file.jpg").unwrap();
-            resp.copy_to(&mut file).unwrap();
+            let mut buf: Vec<u8> = vec![];
+            resp.copy_to(&mut buf).unwrap();
+            self.image_receiver.add_image(buf, format!("{}.png", self.current_image).to_string());
+            self.current_image += 1;
         }
     }
 

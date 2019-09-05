@@ -24,6 +24,7 @@ impl Msg {
         Msg {
             bools: vec![false; 8],
             floats: vec![0f32; 3],
+            ints: vec![0u8; 0],
             conditions: Vec::<(&str, Value)>::new(),
             conn: stream
         }
@@ -60,6 +61,7 @@ impl Msg {
         self.conditions.push((key, value.clone()));
         match value {
             Value::Bool(v) => { self.bools[index] = v },
+            Value::Int(v) => { self.ints[index] = v },
             Value::Float(v) => { self.floats[index] = v }
         }
         Ok(())
