@@ -204,9 +204,12 @@ impl<T: AddImage> Task<T> {
         let mut msg = Msg::new(self.conn.try_clone().unwrap());
         msg.set("X_REST_STATE", Value::Bool(true))?;
         msg.set("Y_REST_STATE", Value::Bool(true))?;
-        msg.set("LIGHT", Value::Bool(true))?;
         msg.send()?;
-        self.go_on_if(msg.conditions.clone());
+        std::thread::sleep_ms(100);
+        self.go_on_if(vec![
+            ("X_FINISHED", Value::Bool(true)),
+            ("Y_FINISHED", Value::Bool(true))
+        ]);
         Ok(())
     }
 
