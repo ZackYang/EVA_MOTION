@@ -221,9 +221,10 @@ impl<T: AddImage> Task<T> {
                 Ok(states) => {
                     // let reader = Reader::new(&mut states.clone());
                     self.reader.load(&mut states.clone());
-                    let mut result = false;
+                    let mut result = true;
                     for (key, value) in &conditions {
                         result &= self.reader.check(key, value.clone());
+                        println!("Key: {:?}, Value: {:?}, Check Result: {:?}", key, value, result);
                     }
                     if result { done = true }
                 },

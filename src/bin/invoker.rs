@@ -39,33 +39,33 @@ fn main() {
         ("Y_CURRENT_SPEED",      ValueType::Float),
     ];
 
-    let mut task = Task::new("192.168.2.166:2000", keys);
+    // let mut task = Task::new("192.168.2.166:2000", keys);
 
-    task.invoke(
-        vec![false,false,false,false,false,true,true,false],
-        vec![0.0f32, 0.0f32, 0.0f32]);
+    // task.invoke(
+    //     vec![false,false,false,false,false,true,true,false],
+    //     vec![0.0f32, 0.0f32, 0.0f32]);
 
-    std::thread::sleep_ms(10000);
+    // std::thread::sleep_ms(10000);
 
-    task.invoke(
-        vec![false,false,false,false,false,false,false,true],
-        vec![0.0f32, 0.0f32, 0.0f32]);
+    // task.invoke(
+    //     vec![false,false,false,false,false,false,false,true],
+    //     vec![0.0f32, 0.0f32, 0.0f32]);
 
-    std::thread::sleep_ms(10000);
+    // std::thread::sleep_ms(10000);
 
-    task.invoke(
-        vec![false,false,false,false,false,false,false,true],
-        vec![100.0f32, 100.0f32, 70.0f32]);
+    // task.invoke(
+    //     vec![false,false,false,false,false,false,false,true],
+    //     vec![100.0f32, 100.0f32, 70.0f32]);
 
-    std::thread::sleep_ms(10000);
+    // std::thread::sleep_ms(10000);
 
-    task.invoke(
-        vec![false,false,false,true,true,false,false,true],
-        vec![100.0f32, 100.0f32, 70.0f32]);
+    // task.invoke(
+    //     vec![false,false,false,true,true,false,false,true],
+    //     vec![100.0f32, 100.0f32, 70.0f32]);
 
-    std::thread::sleep_ms(10000);
+    // std::thread::sleep_ms(10000);
 
-    task.invoke(
-        vec![false,false,false,false,false,true,true,true],
-        vec![0.0f32, 0.0f32, 0.0f32]);
+    // task.invoke(
+    //     vec![false,false,false,false,false,true,true,true],
+    //     vec![0.0f32, 0.0f32, 0.0f32]);
 }

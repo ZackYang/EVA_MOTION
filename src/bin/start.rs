@@ -8,22 +8,22 @@ use eva_motion_control::task::reader::ValueType;
 fn main() {
 
     
-    let mut task = Task::new("localhost:3333", keys);
+    // let mut task = Task::new("localhost:3333", keys);
 
-    task.add(MotionType::InitCamera);
-    task.add(MotionType::Capture);
-    task.add(MotionType::StopCamera);
-    task.add(MotionType::Reset);
-    task.add(MotionType::Light(true));
-    task.add(MotionType::MoveTo(15.0, 13.0, 20.0));
-    task.add(MotionType::Reset);
+    // task.add(MotionType::InitCamera);
+    // task.add(MotionType::Capture);
+    // task.add(MotionType::StopCamera);
+    // task.add(MotionType::Reset);
+    // task.add(MotionType::Light(true));
+    // task.add(MotionType::MoveTo(15.0, 13.0, 20.0));
+    // task.add(MotionType::Reset);
 
-    task.add(MotionType::GoOnIf(vec![("Y_TRIGGER", Value::Bool(true))]));
+    // task.add(MotionType::GoOnIf(vec![("Y_TRIGGER", Value::Bool(true))]));
 
-    task.start().unwrap();
-    println!("Status: {:?}", task.status);
-    while task.status == Status::Working {
-        task.run().unwrap();
-        std::thread::sleep_ms(20000);
-    }
+    // task.start().unwrap();
+    // println!("Status: {:?}", task.status);
+    // while task.status == Status::Working {
+    //     task.run().unwrap();
+    //     std::thread::sleep_ms(20000);
+    // }
 }

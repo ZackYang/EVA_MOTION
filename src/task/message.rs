@@ -4,7 +4,7 @@ use std::collections::HashMap;
 extern crate bitty;
 use bitty::FromBits;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Bool(bool),
     Int(u8),

@@ -170,7 +170,15 @@ mod tests {
             ("B",              ValueType::Bool),
             ("A",              ValueType::Bool),
             ("FLOAT",          ValueType::Float),
-            ("INT",            ValueType::Int)
+            ("INT",            ValueType::Int),
+            ("_",              ValueType::Bool),
+            ("_",              ValueType::Bool),
+            ("_",              ValueType::Bool),
+            ("_",              ValueType::Bool),
+            ("BD",              ValueType::Bool),
+            ("BC",              ValueType::Bool),
+            ("BB",              ValueType::Bool),
+            ("BA",              ValueType::Bool),
         ];
 
         let mut reader = Reader::new(keys);
@@ -180,6 +188,7 @@ mod tests {
         data.append(&mut float_bytes);
         let mut int_bytes = (214u8).to_be_bytes().to_vec();
         data.append(&mut int_bytes);
+        data.append(&mut vec![2u8]);
 
         reader.load(&mut data);
         assert_eq!(reader.check("A",        Value::Bool(false)), true);
@@ -187,5 +196,8 @@ mod tests {
         assert_eq!(reader.check("C",        Value::Bool(false)), true);
         assert_eq!(reader.check("FLOAT",    Value::Float(0.15625)), true);
         assert_eq!(reader.check("INT",      Value::Int(214)), true);
+        assert_eq!(reader.check("BA",        Value::Bool(false)), true);
+        assert_eq!(reader.check("BB",        Value::Bool(true)), true);
+        assert_eq!(reader.check("BC",        Value::Bool(false)), true);
     }
 }

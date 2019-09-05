@@ -1,9 +1,11 @@
+extern crate bitty;
+use bitty::{AsBits, FromBits};
 use std::thread;
 use std::net::{TcpListener, TcpStream, Shutdown};
 use std::io::{Read, Write};
 
 fn handle_client(mut stream: TcpStream) {
-    let mut data = [0 as u8; 13]; // using 50 byte buffer
+    let mut data = vec![0u8;17];
     while match stream.read(&mut data) {
         Ok(size) => {
             // echo everything!
@@ -12,10 +14,63 @@ fn handle_client(mut stream: TcpStream) {
             }
             let mut sending_stream = stream.try_clone().unwrap();
             thread::spawn(move|| { 
-                for i in 0u8..255u8 {
-                    std::thread::sleep_ms(3000);
-                    sending_stream.write(&vec![i; 36]).unwrap();
-                }
+                // for i in 0u8..255u8 {
+                    let new_data = vec![
+                        false, false, false, false, false, true, true, true,
+
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true, 
+                        
+                        false, false, false, false, false, true, false, true,
+
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true, 
+                        
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true,
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true, 
+                        false, false, false, false, false, false, false, true];
+                    
+                    let mut u8_data = vec![0u8; 0];
+
+                    for chunk in new_data.to_vec().chunks(8) {
+                        let mut _bits = chunk.to_vec();
+                        _bits.reverse();
+                        u8_data.push(u8::from_bits(&_bits[..]));
+                    };
+
+                    std::thread::sleep_ms(5000);
+                    sending_stream.write(&u8_data).unwrap();
+                // }
             });
 
             true
