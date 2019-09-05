@@ -113,6 +113,7 @@ impl<T: AddImage> Task<T> {
 
     pub fn start(&mut self) -> Result<(), &str> {
         if self.status == Status::Pending && self. current_step == 0 {
+            self.stop_camera();
             self.status = Status::Working;
             Ok(())
         } else {
@@ -121,7 +122,6 @@ impl<T: AddImage> Task<T> {
     }
 
     pub fn run(&mut self) -> Result<(), &str> {
-        self.stop_camera();
         if self.status == Status::Fail {
             return Err("Task Failed");
         }
