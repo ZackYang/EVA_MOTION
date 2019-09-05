@@ -105,7 +105,7 @@ impl Reader {
             }
         }
 
-        println!("{:?}", self.floats);
+        println!("{:?}", self.bools);
     }
 
     fn index(&self, key: &str) -> Result<usize, &'static str> {
