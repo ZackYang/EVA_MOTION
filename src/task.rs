@@ -121,6 +121,7 @@ impl<T: AddImage> Task<T> {
     }
 
     pub fn run(&mut self) -> Result<(), &str> {
+        self.stop_camera();
         if self.status == Status::Fail {
             return Err("Task Failed");
         }
