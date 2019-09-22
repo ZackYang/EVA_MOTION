@@ -27,7 +27,7 @@ use std::process::Command;
 use std::time::Instant;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MotionType {
     MoveTo(f32, f32, f32),
     InitCamera,
