@@ -25,6 +25,7 @@ use std::sync::mpsc::{channel, Receiver};
 use std::io::Read;
 use std::process::Command;
 use std::time::Instant;
+use std::io::Write;
 
 
 #[derive(Clone, Debug)]
@@ -119,6 +120,11 @@ impl<T: AddImage> Task<T> {
         } else {
             Err("Task is not pending")
         }
+    }
+
+    pub fn prepare(&mut self) -> Result<(), &str> {
+        self.detect_pattern();
+        Ok(())
     }
 
     pub fn run(&mut self) -> Result<(), &str> {
@@ -269,6 +275,27 @@ impl<T: AddImage> Task<T> {
             resp.copy_to(&mut buf).unwrap();
             self.image_receiver.add_image(buf, format!("{}.png", self.current_image).to_string());
             self.current_image += 1;
+        }
+    }
+
+    fn detect_pattern(&mut self) {
+        self.move_to(200f32, 120f32, 60f32).unwrap();
+        // camera port 9990
+        let mut try_get_image = reqwest::get("http://localhost:9990/capture");
+        let mut resp = match try_get_image {
+            Ok(r) => { r },
+            Err(e) => {
+                self.status = Status::Fail;
+                self.image_receiver.change_status("Cannot connect to camera".to_string());
+                return;
+            } 
+        };
+
+        if resp.status().is_success() {
+            println!("success!");
+            let mut buf: Vec<u8> = vec![];
+            resp.copy_to(&mut buf).unwrap();
+            self.image_receiver.add_image(buf, format!("{}.png", "detect_pattern").to_string());
         }
     }
 
